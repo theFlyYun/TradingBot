@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-import re
 import time
 from typing import Any, Protocol
 
@@ -11,6 +10,7 @@ import pandas as pd
 import requests
 
 from .config import MarketDataConfig
+from .storage import Warehouse
 
 
 def normalize_hk_symbol(symbol: str) -> str:
@@ -52,28 +52,26 @@ class YahooPriceProvider:
 
 
 class CachedPriceProvider:
-    def __init__(self, provider: PriceProvider, cache_dir: Path, ttl_seconds: int) -> None:
+    def __init__(self, provider: PriceProvider, warehouse: Warehouse, ttl_seconds: int) -> None:
         self.provider = provider
-        self.cache_dir = cache_dir
+        self.warehouse = warehouse
         self.ttl_seconds = ttl_seconds
 
     def fetch(self, symbol: str) -> PriceFetchResult:
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        path = _cache_path(self.cache_dir, symbol, self.provider.config.price_range, self.provider.config.interval)
+        yahoo_symbol = normalize_hk_symbol(symbol)
+        path = self.warehouse.price_path(self.provider.config.provider, self.provider.config.interval, yahoo_symbol)
         if path.exists() and time.time() - path.stat().st_mtime <= self.ttl_seconds:
-            return PriceFetchResult(pd.read_pickle(path), "cache")
+            return PriceFetchResult(self.warehouse.read_prices(self.provider.config.provider, self.provider.config.interval, yahoo_symbol), "cache")
 
         frame = self.provider.fetch(symbol)
-        temp_path = path.with_suffix(".tmp")
-        frame.to_pickle(temp_path)
-        temp_path.replace(path)
+        self.warehouse.write_prices(frame, self.provider.config.provider, self.provider.config.interval, yahoo_symbol)
         return PriceFetchResult(frame, "live")
 
 
-def build_price_provider(config: MarketDataConfig, cache_dir: Path) -> CachedPriceProvider:
+def build_price_provider(config: MarketDataConfig, warehouse_dir: Path) -> CachedPriceProvider:
     return CachedPriceProvider(
         YahooPriceProvider(config),
-        cache_dir=cache_dir,
+        warehouse=Warehouse(warehouse_dir),
         ttl_seconds=config.cache_ttl_seconds,
     )
 
@@ -117,26 +115,20 @@ def fetch_daily_prices(
     return frame
 
 
-def _cache_path(cache_dir: Path, symbol: str, range_: str, interval: str = "1d") -> Path:
-    safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", f"{normalize_hk_symbol(symbol)}_{range_}_{interval}")
-    return cache_dir / f"{safe_name}.pkl"
-
-
 def fetch_daily_prices_cached(
     symbol: str,
     cache_dir: Path,
     range_: str = "1y",
     ttl_seconds: int = 180,
 ) -> tuple[pd.DataFrame, bool]:
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    path = _cache_path(cache_dir, symbol, range_)
+    warehouse = Warehouse(cache_dir)
+    yahoo_symbol = normalize_hk_symbol(symbol)
+    path = warehouse.price_path("yahoo", "1d", yahoo_symbol)
     if path.exists() and time.time() - path.stat().st_mtime <= ttl_seconds:
-        return pd.read_pickle(path), True
+        return warehouse.read_prices("yahoo", "1d", yahoo_symbol), True
 
     frame = fetch_daily_prices(symbol, range_)
-    temp_path = path.with_suffix(".tmp")
-    frame.to_pickle(temp_path)
-    temp_path.replace(path)
+    warehouse.write_prices(frame, "yahoo", "1d", yahoo_symbol)
     return frame, False
 
 

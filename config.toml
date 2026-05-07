@@ -20,6 +20,7 @@ symbols_csv = "data/symbols.csv"
 universe_csv = "data/universe.csv"
 watchlist_csv = "data/watchlist.csv"
 reports_dir = "reports"
+warehouse_dir = "data/warehouse"
 
 [fundamentals]
 # "csv" uses data/universe.csv. "alpha_vantage" fetches latest available

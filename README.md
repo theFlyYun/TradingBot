@@ -27,6 +27,21 @@
 python3 -m pip install -r requirements.txt
 ```
 
+可选：以可编辑模式安装项目，方便后续工程化开发：
+
+```bash
+python3 -m pip install -e ".[dev]"
+```
+
+常用开发命令：
+
+```bash
+make test
+make compile
+make monitor-once
+make warehouse-sample
+```
+
 每周生成 watchlist：
 
 ```bash
@@ -87,6 +102,20 @@ interval = "1d"
 request_timeout_seconds = 20
 cache_ttl_seconds = 180
 max_workers = 10
+```
+
+行情和信号结果会写入本地 Parquet 仓库，方便 DuckDB 查询和后续回测：
+
+```text
+data/warehouse/
+  prices/provider=yahoo/interval=1d/symbol=AAPL.parquet
+  signals/run_date=YYYY-MM-DD/signals.parquet
+```
+
+查询本地历史行情：
+
+```bash
+python3 -m hkbot.warehouse prices --symbols AAPL MSFT --start 2024-01-01
 ```
 
 查看单只股票过去两年的触发点：
@@ -223,3 +252,21 @@ curl -X POST http://127.0.0.1:8787/command \
 - `data/universe.csv`：基础股票池和财务数据，建议每周人工/脚本更新
 - `data/watchlist.csv`：筛选后的股票池
 - `reports/signals_YYYY-MM-DD.csv`：每日监控结果，本地生成，不提交到 Git
+
+## 项目结构
+
+```text
+hkbot/
+  data.py              # 行情 provider 和本地缓存入口
+  storage.py           # DuckDB / Parquet 本地仓库
+  monitor.py           # 当前交易提醒运行主流程
+  notify.py            # 飞书与 webhook 通知
+  strategy.py          # 当前 MA/RSI 策略，保留兼容入口
+  strategies/          # 后续多策略注册与组合
+  backtesting/         # 后续回测引擎、交易记录、收益曲线
+  research/            # 后续研究脚本和 notebook 辅助函数
+tests/                 # 基础单元测试
+docs/                  # 架构与路线说明
+notebooks/             # 后续研究 notebook
+experiments/           # 后续参数实验、策略试验
+```

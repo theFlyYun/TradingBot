@@ -4,7 +4,7 @@ import argparse
 
 from .config import load_config
 from .data import fetch_daily_prices
-from .strategy import add_indicators
+from .strategy import build_strategy
 
 
 def main() -> int:
@@ -14,7 +14,8 @@ def main() -> int:
     args = parser.parse_args()
 
     config = load_config(args.config)
-    frame = add_indicators(fetch_daily_prices(args.symbol, range_="2y"), config.signals).dropna(subset=["ma120", "rsi"])
+    strategy = build_strategy(config.signals)
+    frame = strategy.add_indicators(fetch_daily_prices(args.symbol, range_="2y")).dropna(subset=["ma120", "rsi"])
     frame["buy"] = (frame["close"] < frame["ma120"] * config.signals.buy_below_ma120) & (
         frame["rsi"] < config.signals.buy_rsi_below
     )

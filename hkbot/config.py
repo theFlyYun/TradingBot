@@ -33,6 +33,7 @@ class RuntimeConfig:
     universe_csv: Path
     watchlist_csv: Path
     reports_dir: Path
+    warehouse_dir: Path
 
 
 @dataclass(frozen=True)
@@ -119,6 +120,7 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
             universe_csv=(base / runtime["universe_csv"]).resolve(),
             watchlist_csv=(base / runtime["watchlist_csv"]).resolve(),
             reports_dir=(base / runtime["reports_dir"]).resolve(),
+            warehouse_dir=(base / runtime.get("warehouse_dir", "data/warehouse")).resolve(),
         ),
         fundamentals=FundamentalsConfig(
             provider=fundamentals.get("provider", "csv"),

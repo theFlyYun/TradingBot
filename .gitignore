@@ -7,9 +7,13 @@
 logs/
 run/
 reports/
+data/warehouse/
 .cache/
 downloads/
 video_analysis/
+notebooks/**/*.ipynb_checkpoints/
+experiments/**/outputs/
+experiments/**/artifacts/
 
 # Python
 __pycache__/
@@ -20,6 +24,7 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
+*.egg-info/
 
 # macOS / editor
 .DS_Store

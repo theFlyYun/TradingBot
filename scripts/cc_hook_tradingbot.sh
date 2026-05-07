@@ -31,15 +31,14 @@ clean="$(printf '%s' "$content" \
   | sed -E 's#<at id="[^"]+">[^<]*</at>##g; s#<at id=[^>]+></at>##g; s#^@[^[:space:]]+[[:space:]]*##g' \
   | xargs)"
 
-case "$clean" in
-  "/tb help"|"/tbhelp"|"tb help"|"help"|"帮助"|"h")
-    reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.command tradingbot help --no-send)"
+command_name="$(cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.command "$clean" --match)"
+
+case "$command_name" in
+  "help"|"watchlist")
+    reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.command "$clean" --no-send)"
     ;;
-  "/tb watchlist"|"/tbwatchlist"|"tb watchlist"|"watchlist"|"watch list"|"wl"|"列表")
-    reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.command tradingbot watchlist --no-send)"
-    ;;
-  "/tb alert"|"/tb signals"|"tb alert"|"tb signals"|"signals"|"signal"|"alert"|"alerts"|"提醒"|"交易提醒")
-    reply="已开始拉取最新行情并分析。完成后会发送交易提醒卡片。"
+  "alert")
+    reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.command "$clean" --no-send)"
     (
       echo "manual alert started: $(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG_FILE"
       if cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.monitor --force-notify --max-workers 10 --cache-ttl-seconds 180 >> "$LOG_FILE" 2>&1; then
@@ -54,7 +53,7 @@ case "$clean" in
     ) &
     ;;
   *)
-    reply="未命中指令。可用：help / watchlist / wl / alert"
+    reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.command "$clean" --no-send)"
     ;;
 esac
 

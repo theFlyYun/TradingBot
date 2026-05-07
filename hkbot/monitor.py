@@ -11,19 +11,20 @@ import pandas as pd
 from .config import SignalConfig, load_config
 from .data import CachedPriceProvider, build_price_provider, today_stamp
 from .notify import build_signal_card, format_signal_message, has_actionable_signal, send_feishu_notification
-from .strategy import latest_signal
+from .storage import Warehouse
+from .strategy import TradingStrategy, build_strategy
 
 
 def _analyze_symbol(
     symbol: str,
     provider: CachedPriceProvider,
-    signal_config: SignalConfig,
+    strategy: TradingStrategy,
     metadata: dict[str, dict[str, object]],
 ) -> dict[str, object]:
     started_at = time.perf_counter()
     try:
         result = provider.fetch(symbol)
-        row = latest_signal(result.frame, signal_config)
+        row = strategy.latest_signal(result.frame)
         row["data_source"] = result.source
     except Exception as exc:
         row = {"symbol": symbol, "signal": "ERROR", "reason": str(exc), "data_source": "error"}
@@ -43,17 +44,18 @@ def monitor_symbols(
     config = load_config(config_path)
     metadata = metadata or {}
     started_at = time.perf_counter()
-    cache_dir = config.runtime.reports_dir.parent / ".cache" / "prices"
     market_data_config = config.market_data
     if cache_ttl_seconds is not None:
         market_data_config = replace(market_data_config, cache_ttl_seconds=cache_ttl_seconds)
-    provider = build_price_provider(market_data_config, cache_dir)
+    warehouse = Warehouse(config.runtime.warehouse_dir)
+    provider = build_price_provider(market_data_config, config.runtime.warehouse_dir)
+    strategy = build_strategy(config.signals)
     rows_by_symbol: dict[str, dict[str, object]] = {}
     configured_workers = max_workers if max_workers is not None else market_data_config.max_workers
     worker_count = max(1, min(configured_workers, len(symbols) or 1))
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = {
-            executor.submit(_analyze_symbol, symbol, provider, config.signals, metadata): symbol
+            executor.submit(_analyze_symbol, symbol, provider, strategy, metadata): symbol
             for symbol in symbols
         }
         for future in as_completed(futures):
@@ -75,7 +77,9 @@ def monitor_symbols(
 
     config.runtime.reports_dir.mkdir(parents=True, exist_ok=True)
     report_path = config.runtime.reports_dir / f"signals_{today_stamp()}.csv"
-    pd.DataFrame(rows).to_csv(report_path, index=False)
+    report_frame = pd.DataFrame(rows)
+    report_frame.to_csv(report_path, index=False)
+    warehouse.write_signal_report(report_frame, today_stamp())
 
     if has_actionable_signal(rows) or config.feishu.notify_on_empty or force_notify:
         message = format_signal_message(rows, config.feishu.custom_keyword)
