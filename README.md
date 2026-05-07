@@ -77,6 +77,18 @@ python3 -m hkbot.scheduler --once
 python3 -m hkbot.monitor --symbols 0005.HK 0939.HK 0883.HK
 ```
 
+行情源、缓存和并发在 `config.toml` 的 `[market_data]` 中配置：
+
+```toml
+[market_data]
+provider = "yahoo"
+price_range = "1y"
+interval = "1d"
+request_timeout_seconds = 20
+cache_ttl_seconds = 180
+max_workers = 10
+```
+
 查看单只股票过去两年的触发点：
 
 ```bash

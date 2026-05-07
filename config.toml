@@ -27,6 +27,16 @@ reports_dir = "reports"
 provider = "csv"
 api_key = ""
 
+[market_data]
+# Current implementation supports "yahoo". Keep provider-specific details out
+# of monitor.py so a paid realtime/batch provider can be added later.
+provider = "yahoo"
+price_range = "1y"
+interval = "1d"
+request_timeout_seconds = 20
+cache_ttl_seconds = 180
+max_workers = 10
+
 [scheduler]
 # Price/technical signals can be checked intraday. Fundamentals are slower
 # moving, so refresh them much less often.

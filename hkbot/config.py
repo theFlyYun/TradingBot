@@ -42,6 +42,16 @@ class FundamentalsConfig:
 
 
 @dataclass(frozen=True)
+class MarketDataConfig:
+    provider: str
+    price_range: str
+    interval: str
+    request_timeout_seconds: float
+    cache_ttl_seconds: int
+    max_workers: int
+
+
+@dataclass(frozen=True)
 class SchedulerConfig:
     monitor_interval_minutes: float
     fundamentals_interval_hours: float
@@ -67,6 +77,7 @@ class AppConfig:
     signals: SignalConfig
     runtime: RuntimeConfig
     fundamentals: FundamentalsConfig
+    market_data: MarketDataConfig
     scheduler: SchedulerConfig
     feishu: FeishuConfig
 
@@ -97,6 +108,7 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
     if webhook_url:
         webhook_whitelist = (webhook_url, *webhook_whitelist)
     fundamentals = raw.get("fundamentals", {})
+    market_data = raw.get("market_data", {})
     scheduler = raw.get("scheduler", {})
 
     return AppConfig(
@@ -111,6 +123,14 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
         fundamentals=FundamentalsConfig(
             provider=fundamentals.get("provider", "csv"),
             api_key=os.getenv("ALPHAVANTAGE_API_KEY", fundamentals.get("api_key", "")),
+        ),
+        market_data=MarketDataConfig(
+            provider=market_data.get("provider", "yahoo"),
+            price_range=market_data.get("price_range", "1y"),
+            interval=market_data.get("interval", "1d"),
+            request_timeout_seconds=float(market_data.get("request_timeout_seconds", 20)),
+            cache_ttl_seconds=int(market_data.get("cache_ttl_seconds", 180)),
+            max_workers=int(market_data.get("max_workers", 10)),
         ),
         scheduler=SchedulerConfig(
             monitor_interval_minutes=float(scheduler.get("monitor_interval_minutes", 60)),

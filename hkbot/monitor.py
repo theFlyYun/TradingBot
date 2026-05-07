@@ -2,30 +2,29 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import replace
 from pathlib import Path
 import time
 
 import pandas as pd
 
-from .config import load_config
-from .data import fetch_daily_prices_cached, today_stamp
+from .config import SignalConfig, load_config
+from .data import CachedPriceProvider, build_price_provider, today_stamp
 from .notify import build_signal_card, format_signal_message, has_actionable_signal, send_feishu_notification
 from .strategy import latest_signal
 
 
 def _analyze_symbol(
     symbol: str,
-    config_path: str,
-    cache_dir: Path,
-    cache_ttl_seconds: int,
+    provider: CachedPriceProvider,
+    signal_config: SignalConfig,
     metadata: dict[str, dict[str, object]],
 ) -> dict[str, object]:
-    config = load_config(config_path)
     started_at = time.perf_counter()
     try:
-        prices, cache_hit = fetch_daily_prices_cached(symbol, cache_dir, ttl_seconds=cache_ttl_seconds)
-        row = latest_signal(prices, config.signals)
-        row["data_source"] = "cache" if cache_hit else "live"
+        result = provider.fetch(symbol)
+        row = latest_signal(result.frame, signal_config)
+        row["data_source"] = result.source
     except Exception as exc:
         row = {"symbol": symbol, "signal": "ERROR", "reason": str(exc), "data_source": "error"}
     row["elapsed_ms"] = round((time.perf_counter() - started_at) * 1000)
@@ -38,18 +37,23 @@ def monitor_symbols(
     config_path: str = "config.toml",
     metadata: dict[str, dict[str, object]] | None = None,
     force_notify: bool = False,
-    cache_ttl_seconds: int = 180,
-    max_workers: int = 10,
+    cache_ttl_seconds: int | None = None,
+    max_workers: int | None = None,
 ) -> tuple[list[dict[str, object]], Path]:
     config = load_config(config_path)
     metadata = metadata or {}
     started_at = time.perf_counter()
     cache_dir = config.runtime.reports_dir.parent / ".cache" / "prices"
+    market_data_config = config.market_data
+    if cache_ttl_seconds is not None:
+        market_data_config = replace(market_data_config, cache_ttl_seconds=cache_ttl_seconds)
+    provider = build_price_provider(market_data_config, cache_dir)
     rows_by_symbol: dict[str, dict[str, object]] = {}
-    worker_count = max(1, min(max_workers, len(symbols) or 1))
+    configured_workers = max_workers if max_workers is not None else market_data_config.max_workers
+    worker_count = max(1, min(configured_workers, len(symbols) or 1))
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = {
-            executor.submit(_analyze_symbol, symbol, config_path, cache_dir, cache_ttl_seconds, metadata): symbol
+            executor.submit(_analyze_symbol, symbol, provider, config.signals, metadata): symbol
             for symbol in symbols
         }
         for future in as_completed(futures):
@@ -112,8 +116,8 @@ def main() -> int:
     parser.add_argument("--config", default="config.toml")
     parser.add_argument("--symbols", nargs="*", help="Override watchlist symbols, e.g. 0005.HK 0939.HK")
     parser.add_argument("--force-notify", action="store_true", help="Send a notification even when there is no signal.")
-    parser.add_argument("--cache-ttl-seconds", type=int, default=180, help="Reuse recently fetched market data for this many seconds.")
-    parser.add_argument("--max-workers", type=int, default=10, help="Number of concurrent market data fetch workers.")
+    parser.add_argument("--cache-ttl-seconds", type=int, help="Override market_data.cache_ttl_seconds.")
+    parser.add_argument("--max-workers", type=int, help="Override market_data.max_workers.")
     args = parser.parse_args()
 
     config = load_config(args.config)

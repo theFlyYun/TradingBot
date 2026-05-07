@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 import re
 import time
-from typing import Any
+from typing import Any, Protocol
 
 import pandas as pd
 import requests
+
+from .config import MarketDataConfig
 
 
 def normalize_hk_symbol(symbol: str) -> str:
@@ -19,13 +22,74 @@ def normalize_hk_symbol(symbol: str) -> str:
     return value
 
 
-def fetch_daily_prices(symbol: str, range_: str = "1y") -> pd.DataFrame:
+
+@dataclass(frozen=True)
+class PriceFetchResult:
+    frame: pd.DataFrame
+    source: str
+
+
+class PriceProvider(Protocol):
+    config: MarketDataConfig
+
+    def fetch(self, symbol: str) -> pd.DataFrame:
+        ...
+
+
+class YahooPriceProvider:
+    def __init__(self, config: MarketDataConfig) -> None:
+        if config.provider != "yahoo":
+            raise ValueError(f"unsupported market data provider: {config.provider}")
+        self.config = config
+
+    def fetch(self, symbol: str) -> pd.DataFrame:
+        return fetch_daily_prices(
+            symbol,
+            range_=self.config.price_range,
+            interval=self.config.interval,
+            timeout=self.config.request_timeout_seconds,
+        )
+
+
+class CachedPriceProvider:
+    def __init__(self, provider: PriceProvider, cache_dir: Path, ttl_seconds: int) -> None:
+        self.provider = provider
+        self.cache_dir = cache_dir
+        self.ttl_seconds = ttl_seconds
+
+    def fetch(self, symbol: str) -> PriceFetchResult:
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        path = _cache_path(self.cache_dir, symbol, self.provider.config.price_range, self.provider.config.interval)
+        if path.exists() and time.time() - path.stat().st_mtime <= self.ttl_seconds:
+            return PriceFetchResult(pd.read_pickle(path), "cache")
+
+        frame = self.provider.fetch(symbol)
+        temp_path = path.with_suffix(".tmp")
+        frame.to_pickle(temp_path)
+        temp_path.replace(path)
+        return PriceFetchResult(frame, "live")
+
+
+def build_price_provider(config: MarketDataConfig, cache_dir: Path) -> CachedPriceProvider:
+    return CachedPriceProvider(
+        YahooPriceProvider(config),
+        cache_dir=cache_dir,
+        ttl_seconds=config.cache_ttl_seconds,
+    )
+
+
+def fetch_daily_prices(
+    symbol: str,
+    range_: str = "1y",
+    interval: str = "1d",
+    timeout: float = 20,
+) -> pd.DataFrame:
     yahoo_symbol = normalize_hk_symbol(symbol)
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}"
     response = requests.get(
         url,
-        params={"range": range_, "interval": "1d", "events": "history"},
-        timeout=20,
+        params={"range": range_, "interval": interval, "events": "history"},
+        timeout=timeout,
         headers={"User-Agent": "hk-semi-auto-trader/0.1"},
     )
     response.raise_for_status()
@@ -53,8 +117,8 @@ def fetch_daily_prices(symbol: str, range_: str = "1y") -> pd.DataFrame:
     return frame
 
 
-def _cache_path(cache_dir: Path, symbol: str, range_: str) -> Path:
-    safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", f"{normalize_hk_symbol(symbol)}_{range_}")
+def _cache_path(cache_dir: Path, symbol: str, range_: str, interval: str = "1d") -> Path:
+    safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", f"{normalize_hk_symbol(symbol)}_{range_}_{interval}")
     return cache_dir / f"{safe_name}.pkl"
 
 
