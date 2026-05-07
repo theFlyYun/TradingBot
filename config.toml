@@ -1,0 +1,52 @@
+[screening]
+max_pe = 20
+min_dividend_yield = 0.04
+min_roe = 0.10
+min_market_cap_hkd = 100_000_000_000
+
+[signals]
+ma_window = 120
+rsi_window = 14
+buy_below_ma120 = 0.88
+sell_above_ma120 = 1.12
+buy_rsi_below = 30
+sell_rsi_above = 70
+volume_window = 20
+min_volume_ratio = 0.80
+require_volume_confirmation = false
+
+[runtime]
+symbols_csv = "data/symbols.csv"
+universe_csv = "data/universe.csv"
+watchlist_csv = "data/watchlist.csv"
+reports_dir = "reports"
+
+[fundamentals]
+# "csv" uses data/universe.csv. "alpha_vantage" fetches latest available
+# company overview data at runtime and rewrites data/universe.csv.
+provider = "csv"
+api_key = ""
+
+[scheduler]
+# Price/technical signals can be checked intraday. Fundamentals are slower
+# moving, so refresh them much less often.
+monitor_interval_minutes = 30
+fundamentals_interval_hours = 24
+refresh_fundamentals = false
+
+[feishu]
+# Leave empty to disable legacy webhook notifications.
+webhook_url = ""
+notify_on_empty = false
+custom_keyword = "tradingbot"
+# App mode is for Feishu self-built apps, useful when custom webhook robots are disabled.
+app_id = ""
+app_secret = ""
+# open_id for private messages, or chat_id for group messages.
+receive_id = ""
+receive_id_type = "open_id"
+# Scheduled alerts are sent to every group in chat_whitelist through the Feishu app.
+# webhook_whitelist is intentionally empty now; add webhook URLs only if you want
+# to also send alerts through legacy custom robots.
+chat_whitelist = []
+webhook_whitelist = []

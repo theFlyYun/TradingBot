@@ -1,0 +1,29 @@
+# Local secrets and machine-specific runtime config
+.env
+.env.*
+!.env.example
+
+# Runtime state
+logs/
+run/
+reports/
+.cache/
+downloads/
+video_analysis/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# macOS / editor
+.DS_Store
+*.swp
+
+# Local Codex skill scratch space
+.codex-skill-src/

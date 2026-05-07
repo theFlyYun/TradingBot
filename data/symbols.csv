@@ -1,0 +1,51 @@
+symbol,name,theme
+0700.HK,Tencent Holdings,HK Existing
+0005.HK,HSBC Holdings,HK Existing
+0939.HK,China Construction Bank,HK Existing
+3988.HK,Bank of China,HK Existing
+0388.HK,Hong Kong Exchanges and Clearing,HK Existing
+0011.HK,Hang Seng Bank,HK Existing
+0003.HK,Hong Kong and China Gas,HK Existing
+0883.HK,CNOOC,HK Existing
+0941.HK,China Mobile,HK Existing
+2318.HK,Ping An Insurance,HK Existing
+NVDA,NVIDIA,Nasdaq Top 10
+AAPL,Apple,Nasdaq Top 10
+MSFT,Microsoft,Nasdaq Top 10
+AMZN,Amazon,Nasdaq Top 10
+TSLA,Tesla,Nasdaq Top 10
+META,Meta Platforms,Nasdaq Top 10
+WMT,Walmart,Nasdaq Top 10
+GOOGL,Alphabet Class A,Nasdaq Top 10
+GOOG,Alphabet Class C,Nasdaq Top 10
+AVGO,Broadcom,Nasdaq Top 10
+NEE,NextEra Energy,Power
+CEG,Constellation Energy,Power
+SO,Southern Company,Power
+DUK,Duke Energy,Power
+AEP,American Electric Power,Power
+EXC,Exelon,Power
+PEG,Public Service Enterprise Group,Power
+EA,Electronic Arts,Game
+TTWO,Take-Two Interactive,Game
+RBLX,Roblox,Game
+NTES,NetEase ADR,Game
+TCEHY,Tencent OTC,Game
+SONY,Sony Group ADR,Game
+NFLX,Netflix,Game/Media
+FLNC,Fluence Energy,Energy Storage
+ENPH,Enphase Energy,Energy Storage
+SEDG,SolarEdge Technologies,Energy Storage
+AES,AES Corporation,Energy Storage
+ALB,Albemarle,Energy Storage
+PLTR,Palantir Technologies,AI Defense
+LMT,Lockheed Martin,AI Defense
+RTX,RTX Corporation,AI Defense
+NOC,Northrop Grumman,AI Defense
+GD,General Dynamics,AI Defense
+LHX,L3Harris Technologies,AI Defense
+AVAV,AeroVironment,AI Defense
+KTOS,Kratos Defense & Security,AI Defense
+601126.SS,四方股份 / 四方继保,Requested
+0700.HK,Tencent Holdings,Requested
+000592.SZ,Pingtan Development,Requested
