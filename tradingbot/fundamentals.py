@@ -48,8 +48,8 @@ def alpha_vantage_to_row(symbol: str, fallback_name: str, payload: dict[str, obj
     market_cap = _to_float(payload.get("MarketCapitalization"))
     currency = str(payload.get("Currency") or "").upper()
 
-    # Hong Kong tickers usually return HKD from Alpha Vantage. Keep the field
-    # explicit because the screening threshold is denominated in HKD.
+    # Some providers return market cap in the listing currency. Keep the current
+    # legacy field name for compatibility with existing CSV files.
     market_cap_hkd = market_cap if currency in {"", "HKD"} else market_cap
     return FundamentalRow(
         symbol=symbol,

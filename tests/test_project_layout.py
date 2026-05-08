@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import unittest
 
-from hkbot.backtesting import BacktestRequest, empty_result
-from hkbot.research import load_prices
-from hkbot.strategies import build_strategy
+from tradingbot.backtesting import BacktestRequest, empty_result
+from tradingbot.research import load_prices
+from tradingbot.strategies import build_strategy
 
 
 class ProjectLayoutTest(unittest.TestCase):

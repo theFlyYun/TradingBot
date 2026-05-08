@@ -7,7 +7,7 @@ import unittest
 
 import pandas as pd
 
-from hkbot.commands import command_name, handle_command
+from tradingbot.commands import command_name, handle_command
 
 
 def _config(watchlist_csv: Path, keyword: str = "tradingbot") -> SimpleNamespace:

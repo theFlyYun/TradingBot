@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import replace
+import json
 from pathlib import Path
 import time
 
@@ -13,6 +14,9 @@ from .data import CachedPriceProvider, build_price_provider, today_stamp
 from .notify import build_signal_card, format_signal_message, has_actionable_signal, send_feishu_notification
 from .storage import Warehouse
 from .strategy import TradingStrategy, build_strategy
+
+
+ACTIONABLE_SIGNALS = {"BUY", "SELL"}
 
 
 def _analyze_symbol(
@@ -31,6 +35,51 @@ def _analyze_symbol(
     row["elapsed_ms"] = round((time.perf_counter() - started_at) * 1000)
     row.update(metadata.get(symbol, {}))
     return row
+
+
+def actionable_signature(rows: list[dict[str, object]]) -> list[dict[str, str]]:
+    signature = [
+        {
+            "symbol": str(row.get("symbol", "")),
+            "signal": str(row.get("signal", "")),
+            "strategy": str(row.get("strategy", "")),
+        }
+        for row in rows
+        if row.get("signal") in ACTIONABLE_SIGNALS
+    ]
+    return sorted(signature, key=lambda item: (item["strategy"], item["symbol"], item["signal"]))
+
+
+def _signal_state_path(warehouse: Warehouse) -> Path:
+    return warehouse.root / "state" / "last_actionable_signals.json"
+
+
+def _load_previous_signature(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    if not isinstance(payload, list):
+        return []
+    return [
+        {"symbol": str(item.get("symbol", "")), "signal": str(item.get("signal", "")), "strategy": str(item.get("strategy", ""))}
+        for item in payload
+        if isinstance(item, dict)
+    ]
+
+
+def _write_signature(path: Path, signature: list[dict[str, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(signature, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def has_new_actionable_signal(rows: list[dict[str, object]], warehouse: Warehouse) -> bool:
+    current = actionable_signature(rows)
+    previous = _load_previous_signature(_signal_state_path(warehouse))
+    previous_items = {(item["symbol"], item["signal"], item["strategy"]) for item in previous}
+    return any((item["symbol"], item["signal"], item["strategy"]) not in previous_items for item in current)
 
 
 def monitor_symbols(
@@ -81,7 +130,8 @@ def monitor_symbols(
     report_frame.to_csv(report_path, index=False)
     warehouse.write_signal_report(report_frame, today_stamp())
 
-    if has_actionable_signal(rows) or config.feishu.notify_on_empty or force_notify:
+    should_notify = force_notify or has_new_actionable_signal(rows, warehouse)
+    if should_notify or (config.feishu.notify_on_empty and force_notify):
         message = format_signal_message(rows, config.feishu.custom_keyword)
         refresh_summary = f"数据刷新：live {live_count} / cache {cache_count}，耗时 {total_elapsed}s"
         message = f"{message}\n\n{refresh_summary}"
@@ -97,6 +147,7 @@ def monitor_symbols(
             text=message,
             card=card,
         )
+    _write_signature(_signal_state_path(warehouse), actionable_signature(rows))
     return rows, report_path
 
 

@@ -1,9 +1,9 @@
 symbol,name,pe,dividend_yield,roe,market_cap_hkd,theme
-0883.HK,CNOOC,7.1,0.067,0.16,900000000000,HK Existing
-0005.HK,HSBC Holdings,8.8,0.065,0.12,1200000000000,HK Existing
-2318.HK,Ping An Insurance,6.8,0.061,0.12,650000000000,HK Existing
-0939.HK,China Construction Bank,4.6,0.082,0.11,1500000000000,HK Existing
-0003.HK,Hong Kong and China Gas,18.0,0.048,0.11,160000000000,HK Existing
+0883.HK,CNOOC,7.1,0.067,0.16,900000000000,Initial Watchlist
+0005.HK,HSBC Holdings,8.8,0.065,0.12,1200000000000,Initial Watchlist
+2318.HK,Ping An Insurance,6.8,0.061,0.12,650000000000,Initial Watchlist
+0939.HK,China Construction Bank,4.6,0.082,0.11,1500000000000,Initial Watchlist
+0003.HK,Hong Kong and China Gas,18.0,0.048,0.11,160000000000,Initial Watchlist
 NVDA,NVIDIA,,,,,Nasdaq Top 10
 AAPL,Apple,,,,,Nasdaq Top 10
 MSFT,Microsoft,,,,,Nasdaq Top 10

@@ -16,7 +16,7 @@ cat > "$WRAPPER" <<WRAPPER
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$ROOT"
-exec "$PYTHON_BIN" -u -m hkbot.command_server --port "$PORT"
+exec "$PYTHON_BIN" -u -m tradingbot.command_server --port "$PORT"
 WRAPPER
 chmod +x "$WRAPPER"
 

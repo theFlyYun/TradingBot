@@ -1,19 +1,19 @@
-# 港股半自动交易提醒系统
+# 多市场半自动交易提醒系统
 
-这是根据视频转写复现的 v1：财务指标筛选股票池，每日用 MA120 乖离率和 RSI 生成买卖提醒，通过飞书通知，最后由人手动打开券商软件下单。
+这是根据视频转写复现并逐步工程化的 v1：用财务指标和技术指标维护股票池，按固定周期生成买卖观察，通过飞书通知，最后由人手动打开券商软件确认下单。
 
 它不是自动下单机器人，默认不连接券商账户，也不会执行真实交易。
 
 ## 策略规则
 
-每周筛选股票池：
+股票池筛选：
 
 - PE `< 20`
 - 股息率 `> 4%`
 - ROE `> 10%`
-- 市值 `> 1000 亿港币`
+- 市值达到配置阈值
 
-每日监控买卖时机：
+定时监控买卖时机：
 
 - 买入候选：收盘价 `< MA120 * 0.88` 且 `RSI < 30`
 - 卖出候选：收盘价 `> MA120 * 1.12` 且 `RSI > 70`
@@ -42,18 +42,18 @@ make monitor-once
 make warehouse-sample
 ```
 
-每周生成 watchlist：
+生成 watchlist：
 
 ```bash
-python3 -m hkbot.screen
+python3 -m tradingbot.screen
 ```
 
 刷新最新可用财务数据后再筛选：
 
 ```bash
 export ALPHAVANTAGE_API_KEY="你的 Alpha Vantage API Key"
-python3 -m hkbot.live_fundamentals --provider alpha_vantage
-python3 -m hkbot.screen
+python3 -m tradingbot.live_fundamentals --provider alpha_vantage
+python3 -m tradingbot.screen
 ```
 
 注意：财务数据不是逐秒实时数据，PE、ROE、股息率和市值依赖交易所/财报/数据商更新。这里的“实时”指每次运行时向数据商拉取最新可用值。
@@ -61,20 +61,20 @@ python3 -m hkbot.screen
 每日监控：
 
 ```bash
-python3 -m hkbot.monitor
+python3 -m tradingbot.monitor
 ```
 
 周期性拉取行情并分析，默认每 30 分钟一轮：
 
 ```bash
-python3 -m hkbot.scheduler
+python3 -m tradingbot.scheduler
 ```
 
 周期性刷新财务数据并分析：
 
 ```bash
 export ALPHAVANTAGE_API_KEY="你的 Alpha Vantage API Key"
-python3 -m hkbot.scheduler \
+python3 -m tradingbot.scheduler \
   --refresh-fundamentals \
   --fundamentals-interval-hours 24 \
   --monitor-interval-minutes 5
@@ -83,13 +83,13 @@ python3 -m hkbot.scheduler \
 先测试一轮并退出：
 
 ```bash
-python3 -m hkbot.scheduler --once
+python3 -m tradingbot.scheduler --once
 ```
 
-临时指定股票：
+临时指定股票，支持多个市场的 Yahoo Finance 可识别代码：
 
 ```bash
-python3 -m hkbot.monitor --symbols 0005.HK 0939.HK 0883.HK
+python3 -m tradingbot.monitor --symbols AAPL MSFT 0700.HK 601126.SS
 ```
 
 行情源、缓存和并发在 `config.toml` 的 `[market_data]` 中配置：
@@ -115,13 +115,13 @@ data/warehouse/
 查询本地历史行情：
 
 ```bash
-python3 -m hkbot.warehouse prices --symbols AAPL MSFT --start 2024-01-01
+python3 -m tradingbot.warehouse prices --symbols AAPL MSFT --start 2024-01-01
 ```
 
 查看单只股票过去两年的触发点：
 
 ```bash
-python3 -m hkbot.backtest 0005.HK
+python3 -m tradingbot.backtest AAPL
 ```
 
 ## 飞书通知
@@ -130,7 +130,7 @@ python3 -m hkbot.backtest 0005.HK
 
 ```bash
 export FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/..."
-python3 -m hkbot.monitor
+python3 -m tradingbot.monitor
 ```
 
 没有 webhook 时，程序只写本地 CSV 报告，不发送消息。
@@ -150,7 +150,7 @@ FEISHU_RECEIVE_ID_TYPE="open_id"
 私聊用 `open_id`，群聊用 `chat_id`。配置好后测试：
 
 ```bash
-python3 -m hkbot.test_feishu
+python3 -m tradingbot.test_feishu
 ```
 
 ## Mac 常驻运行
@@ -212,8 +212,8 @@ scripts/stop.sh
 当前飞书自定义机器人 webhook 只能发消息，不能直接接收群聊消息。本项目已实现指令核心和本地 HTTP 触发通路：
 
 ```bash
-python3 -m hkbot.command "tradingbot help"
-python3 -m hkbot.command "tradingbot watchlist"
+python3 -m tradingbot.command "tradingbot help"
+python3 -m tradingbot.command "tradingbot watchlist"
 ```
 
 也可以启动本地指令服务：
@@ -256,7 +256,7 @@ curl -X POST http://127.0.0.1:8787/command \
 ## 项目结构
 
 ```text
-hkbot/
+tradingbot/
   data.py              # 行情 provider 和本地缓存入口
   storage.py           # DuckDB / Parquet 本地仓库
   monitor.py           # 当前交易提醒运行主流程

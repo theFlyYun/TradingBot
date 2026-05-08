@@ -5,8 +5,8 @@ import unittest
 
 import pandas as pd
 
-from hkbot.config import SignalConfig
-from hkbot.strategy import MaRsiStrategy, latest_signal
+from tradingbot.config import SignalConfig
+from tradingbot.strategy import MaRsiStrategy, latest_signal
 
 
 def _signal_config(**overrides: object) -> SignalConfig:

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-from hkbot.config import load_config
-from hkbot.storage import Warehouse
+from tradingbot.config import load_config
+from tradingbot.storage import Warehouse
 
 
 def load_prices(

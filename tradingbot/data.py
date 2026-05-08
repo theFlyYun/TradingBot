@@ -13,7 +13,7 @@ from .config import MarketDataConfig
 from .storage import Warehouse
 
 
-def normalize_hk_symbol(symbol: str) -> str:
+def normalize_symbol(symbol: str) -> str:
     value = symbol.strip().upper()
     if value.endswith(".HK"):
         code = value[:-3]
@@ -58,7 +58,7 @@ class CachedPriceProvider:
         self.ttl_seconds = ttl_seconds
 
     def fetch(self, symbol: str) -> PriceFetchResult:
-        yahoo_symbol = normalize_hk_symbol(symbol)
+        yahoo_symbol = normalize_symbol(symbol)
         path = self.warehouse.price_path(self.provider.config.provider, self.provider.config.interval, yahoo_symbol)
         if path.exists() and time.time() - path.stat().st_mtime <= self.ttl_seconds:
             return PriceFetchResult(self.warehouse.read_prices(self.provider.config.provider, self.provider.config.interval, yahoo_symbol), "cache")
@@ -82,13 +82,13 @@ def fetch_daily_prices(
     interval: str = "1d",
     timeout: float = 20,
 ) -> pd.DataFrame:
-    yahoo_symbol = normalize_hk_symbol(symbol)
+    yahoo_symbol = normalize_symbol(symbol)
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}"
     response = requests.get(
         url,
         params={"range": range_, "interval": interval, "events": "history"},
         timeout=timeout,
-        headers={"User-Agent": "hk-semi-auto-trader/0.1"},
+        headers={"User-Agent": "tradingbot/0.1"},
     )
     response.raise_for_status()
     payload: dict[str, Any] = response.json()
@@ -122,7 +122,7 @@ def fetch_daily_prices_cached(
     ttl_seconds: int = 180,
 ) -> tuple[pd.DataFrame, bool]:
     warehouse = Warehouse(cache_dir)
-    yahoo_symbol = normalize_hk_symbol(symbol)
+    yahoo_symbol = normalize_symbol(symbol)
     path = warehouse.price_path("yahoo", "1d", yahoo_symbol)
     if path.exists() and time.time() - path.stat().st_mtime <= ttl_seconds:
         return warehouse.read_prices("yahoo", "1d", yahoo_symbol), True

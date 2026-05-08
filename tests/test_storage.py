@@ -6,7 +6,7 @@ import unittest
 
 import pandas as pd
 
-from hkbot.storage import Warehouse, read_parquet
+from tradingbot.storage import Warehouse, read_parquet
 
 
 class WarehouseTest(unittest.TestCase):

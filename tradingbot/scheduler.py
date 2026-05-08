@@ -77,7 +77,7 @@ def run_scheduler(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Periodically refresh data and run HK stock signal analysis.")
+    parser = argparse.ArgumentParser(description="Periodically refresh data and run trading signal analysis.")
     parser.add_argument("--config", default="config.toml")
     parser.add_argument("--monitor-interval-minutes", type=float)
     parser.add_argument("--fundamentals-interval-hours", type=float)

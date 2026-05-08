@@ -6,12 +6,12 @@ from typing import Protocol
 import pandas as pd
 
 from .config import ScreeningConfig, SignalConfig
-from .data import normalize_hk_symbol
+from .data import normalize_symbol
 
 
 def screen_universe(universe: pd.DataFrame, config: ScreeningConfig) -> pd.DataFrame:
     frame = universe.copy()
-    frame["symbol"] = frame["symbol"].map(normalize_hk_symbol)
+    frame["symbol"] = frame["symbol"].map(normalize_symbol)
     mask = (
         (frame["pe"] < config.max_pe)
         & (frame["dividend_yield"] > config.min_dividend_yield)

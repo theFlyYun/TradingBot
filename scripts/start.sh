@@ -28,7 +28,7 @@ cd "$ROOT"
 set -a
 [[ -f "$ENV_FILE" ]] && source "$ENV_FILE"
 set +a
-"$PYTHON_BIN" -m hkbot.scheduler --once >> "$LOG_FILE" 2>&1
+"$PYTHON_BIN" -m tradingbot.scheduler --once >> "$LOG_FILE" 2>&1
 WRAPPER
 chmod +x "$WRAPPER"
 

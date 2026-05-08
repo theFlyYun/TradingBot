@@ -9,7 +9,7 @@ from .strategy import screen_universe
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build weekly HK stock watchlist from fundamentals.")
+    parser = argparse.ArgumentParser(description="Build watchlist from fundamentals.")
     parser.add_argument("--config", default="config.toml")
     args = parser.parse_args()
 

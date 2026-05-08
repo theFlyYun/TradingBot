@@ -19,10 +19,10 @@ dev = []
 research = []
 
 [project.scripts]
-tradingbot-monitor = "hkbot.monitor:main"
-tradingbot-scheduler = "hkbot.scheduler:main"
-tradingbot-command = "hkbot.command:main"
-tradingbot-warehouse = "hkbot.warehouse:main"
+tradingbot-monitor = "tradingbot.monitor:main"
+tradingbot-scheduler = "tradingbot.scheduler:main"
+tradingbot-command = "tradingbot.command:main"
+tradingbot-warehouse = "tradingbot.warehouse:main"
 
 [tool.setuptools.packages.find]
-include = ["hkbot*"]
+include = ["tradingbot*"]

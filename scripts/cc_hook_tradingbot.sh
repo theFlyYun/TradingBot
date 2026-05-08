@@ -31,17 +31,17 @@ clean="$(printf '%s' "$content" \
   | sed -E 's#<at id="[^"]+">[^<]*</at>##g; s#<at id=[^>]+></at>##g; s#^@[^[:space:]]+[[:space:]]*##g' \
   | xargs)"
 
-command_name="$(cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.command "$clean" --match)"
+command_name="$(cd "$PROJECT_DIR" && "$PYTHON" -m tradingbot.command "$clean" --match)"
 
 case "$command_name" in
   "help"|"watchlist")
-    reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.command "$clean" --no-send)"
+    reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m tradingbot.command "$clean" --no-send)"
     ;;
   "alert")
-    reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.command "$clean" --no-send)"
+    reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m tradingbot.command "$clean" --no-send)"
     (
       echo "manual alert started: $(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG_FILE"
-      if cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.monitor --force-notify --max-workers 10 --cache-ttl-seconds 180 >> "$LOG_FILE" 2>&1; then
+      if cd "$PROJECT_DIR" && "$PYTHON" -m tradingbot.monitor --force-notify --max-workers 10 --cache-ttl-seconds 180 >> "$LOG_FILE" 2>&1; then
         final_reply=""
       else
         final_reply="当前交易提醒触发失败，请查看后台日志。"
@@ -53,7 +53,7 @@ case "$command_name" in
     ) &
     ;;
   *)
-    reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m hkbot.command "$clean" --no-send)"
+    reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m tradingbot.command "$clean" --no-send)"
     ;;
 esac
 
