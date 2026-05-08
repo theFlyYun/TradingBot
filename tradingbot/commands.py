@@ -7,6 +7,7 @@ from typing import Callable
 import pandas as pd
 
 from .config import AppConfig
+from .llm import LLMError, answer_question
 
 
 @dataclass(frozen=True)
@@ -32,10 +33,20 @@ def _normalize_command(text: str, keyword: str) -> str:
     return value.lower()
 
 
+def _strip_invocation(text: str, keyword: str) -> str:
+    value = text.strip()
+    for prefix in ("/tb", "tb"):
+        if value.lower().startswith(prefix):
+            value = value[len(prefix) :].strip()
+    if keyword and value.lower().startswith(keyword.lower()):
+        value = value[len(keyword) :].strip()
+    return value
+
+
 def command_name(text: str, keyword: str = "tradingbot") -> str | None:
     command = _normalize_command(text, keyword)
     for spec in COMMANDS:
-        if command in spec.aliases:
+        if command in spec.aliases or any(command.startswith(f"{alias} ") for alias in spec.aliases if alias):
             return spec.name
     return None
 
@@ -105,6 +116,30 @@ def _alert_command(_: AppConfig, __: str) -> CommandResult:
     return CommandResult("已开始拉取最新行情并分析。完成后会发送交易提醒卡片。")
 
 
+def _command_body(text: str, keyword: str, aliases: tuple[str, ...]) -> str:
+    command = _strip_invocation(text, keyword)
+    command_lower = command.lower()
+    for alias in sorted(aliases, key=len, reverse=True):
+        alias_lower = alias.lower()
+        if command_lower == alias_lower:
+            return ""
+        if alias and command_lower.startswith(f"{alias_lower} "):
+            return command[len(alias) :].strip()
+    return command
+
+
+def _ai_command(config: AppConfig, text: str) -> CommandResult:
+    question = _command_body(text, config.feishu.custom_keyword, command_aliases("ai"))
+    if not question:
+        return CommandResult("请在指令后写上问题，例如：/tb ai 当前 watchlist 有哪些风险？")
+    if not config.llm.enabled:
+        return CommandResult("AI 查询尚未启用。请在 config.toml 打开 [llm].enabled，并在 .env 配置 OPENAI_API_KEY。")
+    try:
+        return CommandResult(answer_question(config, question))
+    except (LLMError, Exception) as exc:
+        return CommandResult(f"AI 查询暂不可用：{exc}")
+
+
 COMMANDS: tuple[CommandSpec, ...] = (
     CommandSpec(
         name="help",
@@ -124,13 +159,21 @@ COMMANDS: tuple[CommandSpec, ...] = (
         description="立即拉取行情并发送当前交易提醒。",
         handler=_alert_command,
     ),
+    CommandSpec(
+        name="ai",
+        aliases=("ai", "ask", "问", "查询"),
+        description="用自然语言向大模型查询 watchlist、信号和项目上下文。",
+        handler=_ai_command,
+    ),
 )
 
 
 def handle_command(text: str, config: AppConfig) -> CommandResult:
     command = _normalize_command(text, config.feishu.custom_keyword)
     for spec in COMMANDS:
-        if command in spec.aliases and spec.handler:
+        if spec.handler and (
+            command in spec.aliases or any(command.startswith(f"{alias} ") for alias in spec.aliases if alias)
+        ):
             return spec.handler(config, text)
     return CommandResult(
         "\n".join(

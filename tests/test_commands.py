@@ -14,6 +14,7 @@ def _config(watchlist_csv: Path, keyword: str = "tradingbot") -> SimpleNamespace
     return SimpleNamespace(
         feishu=SimpleNamespace(custom_keyword=keyword),
         runtime=SimpleNamespace(watchlist_csv=watchlist_csv),
+        llm=SimpleNamespace(enabled=False),
     )
 
 
@@ -24,6 +25,7 @@ class CommandRoutingTest(unittest.TestCase):
         self.assertEqual(command_name("tradingbot wl"), "watchlist")
         self.assertEqual(command_name("signals"), "alert")
         self.assertEqual(command_name("交易提醒"), "alert")
+        self.assertEqual(command_name("/tb ai 当前 watchlist 有哪些风险？"), "ai")
         self.assertIsNone(command_name("nonsense"))
 
     def test_unknown_command_is_short_and_actionable(self) -> None:
@@ -50,6 +52,14 @@ class CommandRoutingTest(unittest.TestCase):
         self.assertIn("监控数量：3", result.text)
         self.assertIn("【Tech】2", result.text)
         self.assertIn("AAPL Apple", result.text)
+
+    def test_ai_command_reports_when_disabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "watchlist.csv"
+            pd.DataFrame([{"symbol": "AAPL", "name": "Apple", "theme": "Tech"}]).to_csv(path, index=False)
+            result = handle_command("/tb ai 当前 watchlist 有哪些风险？", _config(path))
+
+        self.assertIn("AI 查询尚未启用", result.text)
 
 
 if __name__ == "__main__":

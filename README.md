@@ -137,6 +137,43 @@ python3 -m tradingbot.monitor
 
 默认只有出现 `BUY` / `SELL` 信号才发送飞书消息；无信号不打扰。如果希望每轮都发“无信号”消息，把 `config.toml` 里的 `notify_on_empty` 改成 `true`。
 
+定时播报会记住上一次触发 `BUY` / `SELL` 的股票集合。只有买入/卖出股票集合发生变化，或手动执行 `alert`，才会再次发送交易提醒。
+
+## 大模型分析
+
+项目预留了统一 LLM 接口，当前支持 DeepSeek Chat Completions API 和 OpenAI Responses API。大模型只负责解释、总结、风控检查和自然语言问答，不作为行情源，也不直接决定真实下单。
+
+启用方式：
+
+```toml
+[llm]
+enabled = true
+provider = "deepseek"
+model = "deepseek-v4-flash"
+```
+
+密钥写入本地 `.env`：
+
+```bash
+TRADINGBOT_LLM_PROVIDER="deepseek"
+DEEPSEEK_API_KEY="sk-..."
+DEEPSEEK_MODEL="deepseek-v4-flash"
+```
+
+启用后，交易提醒链路变为：
+
+```text
+行情数据 -> 策略计算 -> 大模型解释/总结/风控检查 -> 飞书通知/交互问答
+```
+
+北京时间每日 09:00 和 20:30 可以发送市场观察报告：
+
+```toml
+[observation]
+enabled = true
+times = ["09:00", "20:30"]
+```
+
 如果你的飞书没有“自定义机器人”，可以用自建应用模式。先用 `cc-connect feishu setup --project my-codex` 创建应用，再把应用信息写入 `.env`：
 
 ```bash
@@ -234,6 +271,8 @@ curl -X POST http://127.0.0.1:8787/command \
 
 - `tradingbot help`：显示可用指令和使用方法
 - `tradingbot watchlist`：显示当前 Watchlist
+- `tradingbot alert`：立即拉取行情并发送当前交易提醒
+- `tradingbot ai 你的问题`：通过大模型自然语言查询 watchlist、信号和项目上下文
 
 当前已接入 cc-connect，飞书里可用：
 
@@ -241,6 +280,7 @@ curl -X POST http://127.0.0.1:8787/command \
 /tb help
 /tb watchlist
 /tb alert
+/tb ai 当前 watchlist 有哪些风险？
 /tbhelp
 /tbwatchlist
 ```
@@ -261,6 +301,7 @@ tradingbot/
   storage.py           # DuckDB / Parquet 本地仓库
   monitor.py           # 当前交易提醒运行主流程
   notify.py            # 飞书与 webhook 通知
+  llm/                 # OpenAI/后续大模型 provider 统一接口
   strategy.py          # 当前 MA/RSI 策略，保留兼容入口
   strategies/          # 后续多策略注册与组合
   backtesting/         # 后续回测引擎、交易记录、收益曲线

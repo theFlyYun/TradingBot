@@ -11,6 +11,7 @@ import pandas as pd
 
 from .config import SignalConfig, load_config
 from .data import CachedPriceProvider, build_price_provider, today_stamp
+from .llm import LLMError, explain_signals
 from .notify import build_signal_card, format_signal_message, has_actionable_signal, send_feishu_notification
 from .storage import Warehouse
 from .strategy import TradingStrategy, build_strategy
@@ -42,12 +43,11 @@ def actionable_signature(rows: list[dict[str, object]]) -> list[dict[str, str]]:
         {
             "symbol": str(row.get("symbol", "")),
             "signal": str(row.get("signal", "")),
-            "strategy": str(row.get("strategy", "")),
         }
         for row in rows
         if row.get("signal") in ACTIONABLE_SIGNALS
     ]
-    return sorted(signature, key=lambda item: (item["strategy"], item["symbol"], item["signal"]))
+    return sorted(signature, key=lambda item: (item["signal"], item["symbol"]))
 
 
 def _signal_state_path(warehouse: Warehouse) -> Path:
@@ -64,7 +64,7 @@ def _load_previous_signature(path: Path) -> list[dict[str, str]]:
     if not isinstance(payload, list):
         return []
     return [
-        {"symbol": str(item.get("symbol", "")), "signal": str(item.get("signal", "")), "strategy": str(item.get("strategy", ""))}
+        {"symbol": str(item.get("symbol", "")), "signal": str(item.get("signal", ""))}
         for item in payload
         if isinstance(item, dict)
     ]
@@ -78,8 +78,7 @@ def _write_signature(path: Path, signature: list[dict[str, str]]) -> None:
 def has_new_actionable_signal(rows: list[dict[str, object]], warehouse: Warehouse) -> bool:
     current = actionable_signature(rows)
     previous = _load_previous_signature(_signal_state_path(warehouse))
-    previous_items = {(item["symbol"], item["signal"], item["strategy"]) for item in previous}
-    return any((item["symbol"], item["signal"], item["strategy"]) not in previous_items for item in current)
+    return current != previous
 
 
 def monitor_symbols(
@@ -134,19 +133,34 @@ def monitor_symbols(
     if should_notify or (config.feishu.notify_on_empty and force_notify):
         message = format_signal_message(rows, config.feishu.custom_keyword)
         refresh_summary = f"数据刷新：live {live_count} / cache {cache_count}，耗时 {total_elapsed}s"
+        llm_summary = ""
+        if config.llm.enabled and has_actionable_signal(rows):
+            try:
+                llm_summary = explain_signals(config, rows)
+            except (LLMError, Exception) as exc:
+                llm_summary = f"AI 分析暂不可用：{exc}"
         message = f"{message}\n\n{refresh_summary}"
-        card = build_signal_card(rows, config.feishu.custom_keyword, refresh_summary) if has_actionable_signal(rows) else None
-        send_feishu_notification(
-            webhook_url=config.feishu.webhook_url,
-            webhook_whitelist=config.feishu.webhook_whitelist,
-            app_id=config.feishu.app_id,
-            app_secret=config.feishu.app_secret,
-            receive_id=config.feishu.receive_id,
-            receive_id_type=config.feishu.receive_id_type,
-            chat_whitelist=config.feishu.chat_whitelist,
-            text=message,
-            card=card,
+        if llm_summary:
+            message = f"{message}\n\nAI 分析\n{llm_summary}"
+        card = (
+            build_signal_card(rows, config.feishu.custom_keyword, refresh_summary, llm_summary)
+            if has_actionable_signal(rows)
+            else None
         )
+        try:
+            send_feishu_notification(
+                webhook_url=config.feishu.webhook_url,
+                webhook_whitelist=config.feishu.webhook_whitelist,
+                app_id=config.feishu.app_id,
+                app_secret=config.feishu.app_secret,
+                receive_id=config.feishu.receive_id,
+                receive_id_type=config.feishu.receive_id_type,
+                chat_whitelist=config.feishu.chat_whitelist,
+                text=message,
+                card=card,
+            )
+        except Exception as exc:
+            print(f"notification skipped: {exc}")
     _write_signature(_signal_state_path(warehouse), actionable_signature(rows))
     return rows, report_path
 

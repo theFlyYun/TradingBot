@@ -45,6 +45,22 @@ monitor_interval_minutes = 30
 fundamentals_interval_hours = 24
 refresh_fundamentals = false
 
+[llm]
+# LLM calls are optional. Keep API keys in .env, not in this file.
+enabled = false
+provider = "deepseek"
+model = "deepseek-v4-flash"
+api_key = ""
+base_url = "https://api.deepseek.com"
+timeout_seconds = 30
+max_output_tokens = 700
+
+[observation]
+# Beijing local time. Scheduler sends these reports only when llm.enabled=true
+# and the selected provider API key is available.
+enabled = false
+times = ["09:00", "20:30"]
+
 [feishu]
 # Leave empty to disable legacy webhook notifications.
 webhook_url = ""

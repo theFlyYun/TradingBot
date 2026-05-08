@@ -3,10 +3,12 @@ set -eu
 
 PROJECT_DIR="${TRADINGBOT_PROJECT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 LOG_FILE="$PROJECT_DIR/logs/cc-connect-hooks.log"
+STATE_FILE="$PROJECT_DIR/run/cc-hook-processed.tsv"
 CC_CONNECT="${CC_CONNECT_BIN:-cc-connect}"
 PYTHON="${PYTHON_BIN:-python3}"
 
 mkdir -p "$PROJECT_DIR/logs"
+mkdir -p "$PROJECT_DIR/run"
 
 {
   echo "----- $(date '+%Y-%m-%d %H:%M:%S') -----"
@@ -15,6 +17,7 @@ mkdir -p "$PROJECT_DIR/logs"
 
 content="${CC_HOOK_CONTENT:-}"
 session_key="${CC_HOOK_SESSION_KEY:-${CC_SESSION_KEY:-}}"
+hook_timestamp="${CC_HOOK_TIMESTAMP:-}"
 allowed_chats="${TRADINGBOT_ALLOWED_CHATS:-}"
 
 chat_id=""
@@ -31,10 +34,28 @@ clean="$(printf '%s' "$content" \
   | sed -E 's#<at id="[^"]+">[^<]*</at>##g; s#<at id=[^>]+></at>##g; s#^@[^[:space:]]+[[:space:]]*##g' \
   | xargs)"
 
+if [ -n "$hook_timestamp" ]; then
+  event_epoch="$(date -j -f "%Y-%m-%dT%H:%M:%S%z" "$(printf '%s' "$hook_timestamp" | sed -E 's/([+-][0-9]{2}):([0-9]{2})$/\1\2/')" "+%s" 2>/dev/null || true)"
+  now_epoch="$(date "+%s")"
+  if [ -n "$event_epoch" ] && [ $((now_epoch - event_epoch)) -gt 120 ]; then
+    echo "ignored stale message: timestamp=$hook_timestamp clean=$clean" >> "$LOG_FILE"
+    exit 0
+  fi
+fi
+
+fingerprint="$(printf '%s\t%s\t%s\n' "$session_key" "$hook_timestamp" "$clean" | shasum -a 256 | awk '{print $1}')"
+if [ -s "$STATE_FILE" ] && grep -q "^$fingerprint	" "$STATE_FILE"; then
+  echo "ignored duplicate message: fingerprint=$fingerprint clean=$clean" >> "$LOG_FILE"
+  exit 0
+fi
+printf '%s\t%s\t%s\n' "$fingerprint" "$(date '+%Y-%m-%d %H:%M:%S')" "$clean" >> "$STATE_FILE"
+tail -200 "$STATE_FILE" > "$STATE_FILE.tmp"
+mv "$STATE_FILE.tmp" "$STATE_FILE"
+
 command_name="$(cd "$PROJECT_DIR" && "$PYTHON" -m tradingbot.command "$clean" --match)"
 
 case "$command_name" in
-  "help"|"watchlist")
+  "help"|"watchlist"|"ai")
     reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m tradingbot.command "$clean" --no-send)"
     ;;
   "alert")

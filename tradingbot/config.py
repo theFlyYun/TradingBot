@@ -73,6 +73,23 @@ class FeishuConfig:
 
 
 @dataclass(frozen=True)
+class LLMConfig:
+    enabled: bool
+    provider: str
+    model: str
+    api_key: str
+    base_url: str
+    timeout_seconds: float
+    max_output_tokens: int
+
+
+@dataclass(frozen=True)
+class ObservationConfig:
+    enabled: bool
+    times: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class AppConfig:
     screening: ScreeningConfig
     signals: SignalConfig
@@ -81,6 +98,8 @@ class AppConfig:
     market_data: MarketDataConfig
     scheduler: SchedulerConfig
     feishu: FeishuConfig
+    llm: LLMConfig
+    observation: ObservationConfig
 
 
 def _load_env_file(path: Path) -> None:
@@ -111,6 +130,8 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
     fundamentals = raw.get("fundamentals", {})
     market_data = raw.get("market_data", {})
     scheduler = raw.get("scheduler", {})
+    llm = raw.get("llm", {})
+    observation = raw.get("observation", {})
 
     return AppConfig(
         screening=ScreeningConfig(**raw["screening"]),
@@ -150,4 +171,33 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
             receive_id_type=os.getenv("FEISHU_RECEIVE_ID_TYPE", feishu.get("receive_id_type", "open_id")),
             chat_whitelist=tuple(str(value) for value in feishu.get("chat_whitelist", []) if value),
         ),
+        llm=_build_llm_config(llm),
+        observation=ObservationConfig(
+            enabled=bool(observation.get("enabled", False)),
+            times=tuple(str(value) for value in observation.get("times", ["09:00", "20:30"]) if value),
+        ),
+    )
+
+
+def _build_llm_config(raw: dict[str, object]) -> LLMConfig:
+    provider = str(os.getenv("TRADINGBOT_LLM_PROVIDER", raw.get("provider", "openai")))
+    default_model = "deepseek-v4-flash" if provider == "deepseek" else "gpt-5.2"
+    default_base_url = "https://api.deepseek.com" if provider == "deepseek" else "https://api.openai.com/v1"
+    if provider == "deepseek":
+        api_key = os.getenv("DEEPSEEK_API_KEY", str(raw.get("api_key", "")))
+        model = os.getenv("DEEPSEEK_MODEL", str(raw.get("model", default_model)))
+        base_url = os.getenv("DEEPSEEK_BASE_URL", str(raw.get("base_url", default_base_url)))
+    else:
+        api_key = os.getenv("OPENAI_API_KEY", str(raw.get("api_key", "")))
+        model = os.getenv("OPENAI_MODEL", str(raw.get("model", default_model)))
+        base_url = os.getenv("OPENAI_BASE_URL", str(raw.get("base_url", default_base_url)))
+
+    return LLMConfig(
+        enabled=bool(raw.get("enabled", False)),
+        provider=provider,
+        model=model,
+        api_key=api_key,
+        base_url=base_url,
+        timeout_seconds=float(raw.get("timeout_seconds", 30)),
+        max_output_tokens=int(raw.get("max_output_tokens", 700)),
     )

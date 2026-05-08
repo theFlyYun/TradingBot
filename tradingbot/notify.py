@@ -65,6 +65,7 @@ def build_signal_card(
     signals: list[dict[str, object]],
     custom_keyword: str = "tradingbot",
     refresh_summary: str = "",
+    llm_summary: str = "",
 ) -> dict[str, object]:
     actionable = [row for row in signals if row.get("signal") in {"BUY", "SELL"}]
     buys = [row for row in actionable if row.get("signal") == "BUY"]
@@ -115,6 +116,18 @@ def build_signal_card(
             {
                 "tag": "note",
                 "elements": [{"tag": "plain_text", "content": refresh_summary}],
+            }
+        )
+
+    if llm_summary:
+        elements.append({"tag": "hr"})
+        elements.append(
+            {
+                "tag": "div",
+                "text": {
+                    "tag": "lark_md",
+                    "content": f"**AI 分析**\n\n{llm_summary}",
+                },
             }
         )
 
