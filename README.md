@@ -38,6 +38,9 @@ python3 -m pip install -e ".[dev]"
 ```bash
 make test
 make compile
+make check
+make smoke
+make check-runtime
 make monitor-once
 make warehouse-sample
 ```

@@ -24,20 +24,17 @@ class CommandSpec:
 
 
 def _normalize_command(text: str, keyword: str) -> str:
-    value = text.strip()
-    for prefix in ("/tb", "tb"):
-        if value.lower().startswith(prefix):
-            value = value[len(prefix) :].strip()
-    if keyword and value.lower().startswith(keyword.lower()):
-        value = value[len(keyword) :].strip()
-    return value.lower()
+    return _strip_invocation(text, keyword).lower()
 
 
 def _strip_invocation(text: str, keyword: str) -> str:
     value = text.strip()
+    lowered = value.lower()
     for prefix in ("/tb", "tb"):
-        if value.lower().startswith(prefix):
-            value = value[len(prefix) :].strip()
+        if lowered == prefix:
+            return ""
+        if lowered.startswith(f"{prefix} "):
+            return value[len(prefix) :].strip()
     if keyword and value.lower().startswith(keyword.lower()):
         value = value[len(keyword) :].strip()
     return value
@@ -104,8 +101,46 @@ def watchlist_text(config: AppConfig) -> str:
     return "\n".join(lines)
 
 
+def info_text(config: AppConfig) -> str:
+    llm_status = "已启用" if config.llm.enabled else "未启用"
+    observation_status = "已启用" if config.observation.enabled else "未启用"
+    observation_times = "、".join(config.observation.times) if config.observation.times else "-"
+    return "\n".join(
+        [
+            "tradingbot 基础信息",
+            "━━━━━━━━━━━━━━",
+            "",
+            "定位",
+            "多市场半自动交易提醒和研究工具。它负责拉取行情、计算策略信号、保存本地数据、发送飞书提醒，最后由你人工确认是否操作。",
+            "",
+            "当前能做什么",
+            "1. 维护 watchlist，按主题查看监控股票。",
+            "2. 定时拉取行情并计算 MA120 / RSI 买卖观察信号。",
+            "3. 有新的 BUY / SELL 股票集合变化时发送飞书提醒，避免重复播报。",
+            "4. 手动触发 alert，立即刷新行情并发送交易提醒卡片。",
+            "5. 将行情和信号写入 DuckDB / Parquet 本地仓库，方便后续回测。",
+            "6. 通过 ai 指令调用大模型解释信号、总结风险、回答项目上下文问题。",
+            "7. 预留早晚市场观察报告和后续回测、策略研究扩展。",
+            "",
+            "当前边界",
+            "不自动下单，不保证预测结果，不把大模型当行情源。所有信号都需要人工确认。",
+            "",
+            "运行状态",
+            f"LLM：{llm_status}",
+            f"市场观察：{observation_status}（{observation_times}）",
+            "",
+            "常用指令",
+            "help / info / watchlist / alert / ai 你的问题",
+        ]
+    )
+
+
 def _help_command(config: AppConfig, _: str) -> CommandResult:
     return CommandResult(help_text(config.feishu.custom_keyword))
+
+
+def _info_command(config: AppConfig, _: str) -> CommandResult:
+    return CommandResult(info_text(config))
 
 
 def _watchlist_command(config: AppConfig, _: str) -> CommandResult:
@@ -146,6 +181,12 @@ COMMANDS: tuple[CommandSpec, ...] = (
         aliases=("help", "h", "?", ""),
         description="查看这份帮助。",
         handler=_help_command,
+    ),
+    CommandSpec(
+        name="info",
+        aliases=("info", "about", "介绍", "基础信息"),
+        description="介绍 tradingbot 是什么、能做什么和当前能力边界。",
+        handler=_info_command,
     ),
     CommandSpec(
         name="watchlist",

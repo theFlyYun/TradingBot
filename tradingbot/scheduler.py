@@ -70,7 +70,7 @@ def _due_observation_keys(now: datetime, times: tuple[str, ...], sent_keys: set[
             continue
         scheduled_at = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
         key = f"{today} {value}"
-        if scheduled_at <= now <= scheduled_at + timedelta(minutes=15) and key not in sent_keys:
+        if scheduled_at <= now and key not in sent_keys:
             due.append(key)
     return due
 
