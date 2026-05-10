@@ -10,8 +10,10 @@ class BacktestRequest:
     symbols: tuple[str, ...]
     start: str
     end: str
-    strategy: str = "ma_rsi"
+    strategy: str = "ma_rsi_v1"
     initial_cash: float = 100_000.0
+    fees: float = 0.001
+    slippage: float = 0.0005
 
 
 @dataclass(frozen=True)

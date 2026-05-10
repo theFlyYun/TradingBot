@@ -5,5 +5,21 @@ historical simulations without coupling them to the live alert runtime.
 """
 
 from .engine import BacktestRequest, BacktestResult, empty_result
+from .vectorbt_engine import (
+    BacktestDataError,
+    VectorBTMissingError,
+    format_summary,
+    run_vectorbt_backtest,
+    write_backtest_report,
+)
 
-__all__ = ["BacktestRequest", "BacktestResult", "empty_result"]
+__all__ = [
+    "BacktestDataError",
+    "BacktestRequest",
+    "BacktestResult",
+    "VectorBTMissingError",
+    "empty_result",
+    "format_summary",
+    "run_vectorbt_backtest",
+    "write_backtest_report",
+]

@@ -12,7 +12,7 @@ class ProjectLayoutTest(unittest.TestCase):
         request = BacktestRequest(symbols=("AAPL",), start="2024-01-01", end="2024-12-31")
         result = empty_result(request)
 
-        self.assertEqual(result.request.strategy, "ma_rsi")
+        self.assertEqual(result.request.strategy, "ma_rsi_v1")
         self.assertTrue(callable(load_prices))
         self.assertTrue(callable(build_strategy))
 

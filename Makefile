@@ -1,4 +1,4 @@
-.PHONY: test compile check smoke check-runtime monitor-once warehouse-sample balance status
+.PHONY: test compile check smoke check-runtime monitor-once warehouse-sample backtest-sample balance status
 
 test:
 	python3 -m unittest discover -s tests
@@ -20,6 +20,9 @@ monitor-once:
 
 warehouse-sample:
 	python3 -m tradingbot.warehouse prices --symbols AAPL MSFT --limit 5
+
+backtest-sample:
+	python3 -m tradingbot.backtesting.run --config /Users/longyunfei/tradingbot-runtime/config.toml --symbols AAPL --start 2024-01-01 --end 2026-05-10
 
 balance:
 	python3 -m tradingbot.llm.balance --config /Users/longyunfei/tradingbot-runtime/config.toml

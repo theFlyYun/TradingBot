@@ -14,11 +14,25 @@ The project is organized around stable boundaries so the alert demo can grow int
 ## Extension Areas
 
 - `tradingbot.strategies`: future strategy registry and multi-strategy composition.
-- `tradingbot.backtesting`: historical simulation, trades, equity curves, metrics.
+- `tradingbot.backtesting`: VectorBT historical simulation, trades, equity curves, metrics.
 - `tradingbot.research`: notebooks/scripts helpers for ad hoc exploration.
 - `tradingbot.data`: provider adapters for Yahoo, paid market data APIs, broker APIs.
 - `tradingbot.llm`: model-provider boundary for DeepSeek/OpenAI now and other LLM providers later.
 - `tradingbot.storage`: DuckDB/Parquet local research warehouse.
+
+## Documentation Boundary
+
+The top-level README should stay short: project purpose, quick start, and links.
+
+Module details live in `docs/modules/`:
+
+- Strategy rules: `docs/modules/strategy.md`
+- Local data warehouse: `docs/modules/data-warehouse.md`
+- Backtesting: `docs/modules/backtesting.md`
+- Notifications: `docs/modules/notifications.md`
+- LLM: `docs/modules/llm.md`
+- Runtime operations: `docs/modules/runtime.md`
+- Commands: `docs/modules/commands.md`
 
 ## LLM Boundary
 

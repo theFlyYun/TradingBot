@@ -16,13 +16,16 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = []
-research = []
+research = [
+  "vectorbt>=1.0.0",
+]
 
 [project.scripts]
 tradingbot-monitor = "tradingbot.monitor:main"
 tradingbot-scheduler = "tradingbot.scheduler:main"
 tradingbot-command = "tradingbot.command:main"
 tradingbot-warehouse = "tradingbot.warehouse:main"
+tradingbot-backtest = "tradingbot.backtesting.run:main"
 
 [tool.setuptools.packages.find]
 include = ["tradingbot*"]

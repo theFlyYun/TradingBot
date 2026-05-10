@@ -2,11 +2,12 @@
 
 ## Near Term
 
-- Add a backtest engine that reads `Warehouse.query_prices`.
-- Persist backtest runs, trades, and equity curves as Parquet.
+- Expand the VectorBT backtest engine with parameter sweeps and benchmark comparison.
+- Persist selected backtest runs as Parquet in addition to CSV reports.
 - Add strategy parameter sweeps for MA/RSI thresholds.
 - Add a simple report command for return, drawdown, win rate, and exposure.
 - Expand LLM-assisted explanations into reusable research reports backed by local warehouse queries.
+- Keep module docs split under `docs/modules/` as each area grows.
 
 ## Later
 
