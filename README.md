@@ -43,6 +43,7 @@ make smoke
 make check-runtime
 make monitor-once
 make warehouse-sample
+make balance
 ```
 
 生成 watchlist：
@@ -161,6 +162,14 @@ model = "deepseek-v4-flash"
 TRADINGBOT_LLM_PROVIDER="deepseek"
 DEEPSEEK_API_KEY="sk-..."
 DEEPSEEK_MODEL="deepseek-v4-flash"
+```
+
+查询 DeepSeek API 余额：
+
+```bash
+make balance
+# 或指定配置文件
+scripts/deepseek_balance.sh /Users/longyunfei/tradingbot-runtime/config.toml
 ```
 
 启用后，交易提醒链路变为：

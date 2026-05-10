@@ -75,10 +75,24 @@ def _write_signature(path: Path, signature: list[dict[str, str]]) -> None:
     path.write_text(json.dumps(signature, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _signature_items(signature: list[dict[str, str]]) -> set[tuple[str, str]]:
+    return {(item["symbol"], item["signal"]) for item in signature}
+
+
+def is_shrink_only_signal_change(rows: list[dict[str, object]], warehouse: Warehouse) -> bool:
+    current_items = _signature_items(actionable_signature(rows))
+    previous_items = _signature_items(_load_previous_signature(_signal_state_path(warehouse)))
+    return bool(previous_items) and current_items < previous_items
+
+
 def has_new_actionable_signal(rows: list[dict[str, object]], warehouse: Warehouse) -> bool:
     current = actionable_signature(rows)
     previous = _load_previous_signature(_signal_state_path(warehouse))
-    return current != previous
+    if current == previous:
+        return False
+    if _signature_items(current) < _signature_items(previous):
+        return False
+    return True
 
 
 def monitor_symbols(
@@ -129,6 +143,7 @@ def monitor_symbols(
     report_frame.to_csv(report_path, index=False)
     warehouse.write_signal_report(report_frame, today_stamp())
 
+    shrink_only_change = is_shrink_only_signal_change(rows, warehouse)
     should_notify = force_notify or has_new_actionable_signal(rows, warehouse)
     if should_notify or (config.feishu.notify_on_empty and force_notify):
         message = format_signal_message(rows, config.feishu.custom_keyword)
@@ -161,7 +176,10 @@ def monitor_symbols(
             )
         except Exception as exc:
             print(f"notification skipped: {exc}")
-    _write_signature(_signal_state_path(warehouse), actionable_signature(rows))
+    if shrink_only_change:
+        print("signal state unchanged: current actionable set is a strict subset of previous state")
+    else:
+        _write_signature(_signal_state_path(warehouse), actionable_signature(rows))
     return rows, report_path
 
 

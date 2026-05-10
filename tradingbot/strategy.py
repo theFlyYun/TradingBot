@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Protocol
 
 import pandas as pd
@@ -31,12 +32,25 @@ def add_indicators(prices: pd.DataFrame, config: SignalConfig) -> pd.DataFrame:
     rs = gain / loss.replace(0, pd.NA)
 
     frame["ma120"] = close.rolling(config.ma_window).mean()
+    frame["ma20"] = close.rolling(20).mean()
+    frame["ma60"] = close.rolling(60).mean()
     frame["rsi"] = 100 - (100 / (1 + rs))
     frame.loc[(loss == 0) & (gain > 0), "rsi"] = 100
     frame.loc[(gain == 0) & (loss > 0), "rsi"] = 0
     frame.loc[(gain == 0) & (loss == 0), "rsi"] = 50
     frame["avg_volume"] = frame["volume"].rolling(config.volume_window).mean()
     frame["volume_ratio"] = frame["volume"] / frame["avg_volume"]
+    frame["return_1d_pct"] = close.pct_change(1) * 100
+    frame["return_5d_pct"] = close.pct_change(5) * 100
+    frame["return_20d_pct"] = close.pct_change(20) * 100
+    frame["distance_to_ma120_pct"] = (close / frame["ma120"] - 1) * 100
+    frame["volatility_20d_pct"] = close.pct_change().rolling(20).std() * math.sqrt(252) * 100
+    frame["high_60d"] = frame["high"].astype(float).rolling(60).max()
+    frame["low_60d"] = frame["low"].astype(float).rolling(60).min()
+    frame["drawdown_60d_pct"] = (close / frame["high_60d"] - 1) * 100
+    range_60d = frame["high_60d"] - frame["low_60d"]
+    frame["range_position_60d_pct"] = (close - frame["low_60d"]) / range_60d.replace(0, pd.NA) * 100
+    frame["intraday_range_pct"] = (frame["high"].astype(float) - frame["low"].astype(float)) / close * 100
     return frame
 
 
@@ -87,15 +101,31 @@ class MaRsiStrategy:
             signal = "HOLD"
             reason = "no threshold crossed"
 
+        def metric(name: str, digits: int = 2) -> float | None:
+            value = row.get(name)
+            if pd.isna(value):
+                return None
+            return round(float(value), digits)
+
         return {
             "symbol": row["symbol"],
             "date": str(row["date"]),
             "close": round(close, 4),
+            "ma20": metric("ma20", 4),
+            "ma60": metric("ma60", 4),
             "ma120": round(ma120, 4),
             "lower_band": round(ma120 * self.config.buy_below_ma120, 4),
             "upper_band": round(ma120 * self.config.sell_above_ma120, 4),
             "rsi": round(rsi, 2),
             "volume_ratio": round(volume_ratio, 2),
+            "return_1d_pct": metric("return_1d_pct"),
+            "return_5d_pct": metric("return_5d_pct"),
+            "return_20d_pct": metric("return_20d_pct"),
+            "distance_to_ma120_pct": metric("distance_to_ma120_pct"),
+            "volatility_20d_pct": metric("volatility_20d_pct"),
+            "drawdown_60d_pct": metric("drawdown_60d_pct"),
+            "range_position_60d_pct": metric("range_position_60d_pct"),
+            "intraday_range_pct": metric("intraday_range_pct"),
             "signal": signal,
             "reason": reason,
             "strategy": self.name,

@@ -168,7 +168,7 @@ def _ai_command(config: AppConfig, text: str) -> CommandResult:
     if not question:
         return CommandResult("请在指令后写上问题，例如：/tb ai 当前 watchlist 有哪些风险？")
     if not config.llm.enabled:
-        return CommandResult("AI 查询尚未启用。请在 config.toml 打开 [llm].enabled，并在 .env 配置 OPENAI_API_KEY。")
+        return CommandResult("AI 查询尚未启用。请在 config.toml 打开 [llm].enabled，并在 .env 配置对应模型的 API Key。")
     try:
         return CommandResult(answer_question(config, question))
     except (LLMError, Exception) as exc:

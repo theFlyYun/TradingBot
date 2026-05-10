@@ -53,6 +53,21 @@ class MaRsiStrategyTest(unittest.TestCase):
 
         self.assertEqual(result["signal"], "SELL")
         self.assertEqual(result["strategy"], "ma_rsi")
+        self.assertIn("distance_to_ma120_pct", result)
+        self.assertIn("return_1d_pct", result)
+
+    def test_latest_signal_includes_trader_context_metrics(self) -> None:
+        closes = [100 + idx for idx in range(80)]
+        result = latest_signal(_prices(closes), _signal_config(ma_window=10))
+
+        self.assertIsNotNone(result["ma20"])
+        self.assertIsNotNone(result["ma60"])
+        self.assertIsNotNone(result["return_5d_pct"])
+        self.assertIsNotNone(result["return_20d_pct"])
+        self.assertIsNotNone(result["volatility_20d_pct"])
+        self.assertIsNotNone(result["drawdown_60d_pct"])
+        self.assertIsNotNone(result["range_position_60d_pct"])
+        self.assertGreater(result["range_position_60d_pct"], 90)
 
     def test_latest_signal_no_data(self) -> None:
         result = latest_signal(_prices([100, 101]), _signal_config(ma_window=5))

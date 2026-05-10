@@ -67,6 +67,7 @@ class DeepSeekChatClient:
                     {"role": "system", "content": instructions},
                     {"role": "user", "content": input_text},
                 ],
+                "thinking": {"type": "disabled"},
                 "max_tokens": self.config.max_output_tokens,
                 "temperature": 0.2,
             },
@@ -76,7 +77,7 @@ class DeepSeekChatClient:
         payload = response.json()
         text = _extract_chat_text(payload)
         if not text:
-            raise LLMError(f"DeepSeek response did not include text output: {payload}")
+            raise LLMError(f"DeepSeek response did not include text output{_chat_finish_reason(payload)}")
         return text.strip()
 
 
@@ -114,6 +115,17 @@ def _extract_chat_text(payload: dict[str, object]) -> str:
         return ""
     content = message.get("content")
     return str(content) if isinstance(content, str) else ""
+
+
+def _chat_finish_reason(payload: dict[str, object]) -> str:
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return ""
+    first = choices[0]
+    if not isinstance(first, dict):
+        return ""
+    reason = first.get("finish_reason")
+    return f" (finish_reason={reason})" if reason else ""
 
 
 def build_llm_client(config: LLMConfig) -> LLMClient | None:

@@ -55,8 +55,23 @@ mv "$STATE_FILE.tmp" "$STATE_FILE"
 command_name="$(cd "$PROJECT_DIR" && "$PYTHON" -m tradingbot.command "$clean" --match)"
 
 case "$command_name" in
-  "help"|"watchlist"|"ai")
+  "help"|"watchlist")
     reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m tradingbot.command "$clean" --no-send)"
+    ;;
+  "ai")
+    reply=""
+    (
+      echo "ai command started: $(date '+%Y-%m-%d %H:%M:%S') clean=$clean" >> "$LOG_FILE"
+      if final_reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m tradingbot.command "$clean" --no-send 2>> "$LOG_FILE")"; then
+        :
+      else
+        final_reply="AI 查询暂不可用，请稍后再试。"
+      fi
+      if [ -n "$session_key" ] && [ -n "$final_reply" ]; then
+        printf '%s' "$final_reply" | "$CC_CONNECT" send -p tradingbot -s "$session_key" --stdin >> "$LOG_FILE" 2>&1 || true
+      fi
+      echo "ai command finished: $(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG_FILE"
+    ) &
     ;;
   "alert")
     reply="$(cd "$PROJECT_DIR" && "$PYTHON" -m tradingbot.command "$clean" --no-send)"
@@ -78,8 +93,8 @@ case "$command_name" in
     ;;
 esac
 
-if [ -n "$session_key" ]; then
+if [ -n "$session_key" ] && [ -n "$reply" ]; then
   printf '%s' "$reply" | "$CC_CONNECT" send -p tradingbot -s "$session_key" --stdin >> "$LOG_FILE" 2>&1 || true
-else
+elif [ -z "$session_key" ]; then
   echo "missing session key, cannot reply" >> "$LOG_FILE"
 fi

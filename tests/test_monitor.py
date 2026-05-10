@@ -4,7 +4,13 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from tradingbot.monitor import _signal_state_path, _write_signature, actionable_signature, has_new_actionable_signal
+from tradingbot.monitor import (
+    _signal_state_path,
+    _write_signature,
+    actionable_signature,
+    has_new_actionable_signal,
+    is_shrink_only_signal_change,
+)
 from tradingbot.storage import Warehouse
 
 
@@ -45,6 +51,36 @@ class MonitorNotificationStateTest(unittest.TestCase):
             rows = [{"symbol": "AAPL", "signal": "SELL", "strategy": "ma_rsi"}]
 
             self.assertTrue(has_new_actionable_signal(rows, warehouse))
+            self.assertFalse(is_shrink_only_signal_change(rows, warehouse))
+
+    def test_shrink_only_actionable_signal_set_is_not_new(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            warehouse = Warehouse(Path(tmp))
+            _write_signature(
+                _signal_state_path(warehouse),
+                [
+                    {"symbol": "AAPL", "signal": "BUY"},
+                    {"symbol": "MSFT", "signal": "SELL"},
+                ],
+            )
+
+            rows = [{"symbol": "AAPL", "signal": "BUY", "strategy": "ma_rsi"}]
+
+            self.assertFalse(has_new_actionable_signal(rows, warehouse))
+            self.assertTrue(is_shrink_only_signal_change(rows, warehouse))
+
+    def test_added_actionable_signal_is_new(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            warehouse = Warehouse(Path(tmp))
+            _write_signature(_signal_state_path(warehouse), [{"symbol": "AAPL", "signal": "BUY"}])
+
+            rows = [
+                {"symbol": "AAPL", "signal": "BUY", "strategy": "ma_rsi"},
+                {"symbol": "MSFT", "signal": "SELL", "strategy": "ma_rsi"},
+            ]
+
+            self.assertTrue(has_new_actionable_signal(rows, warehouse))
+            self.assertFalse(is_shrink_only_signal_change(rows, warehouse))
 
     def test_strategy_change_with_same_symbol_and_signal_is_not_new(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
